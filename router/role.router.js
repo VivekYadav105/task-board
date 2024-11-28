@@ -6,11 +6,8 @@ const role = require('../middleware/role.middleware');
 
 router.get('/:org_id/types',auth,async(req,res,next)=>{
     const {org_id} = req.params
-    const membership = await client.organizationRoles.findMany({
+    const membership = await client.role.findMany({
         where:{organization_id:Number(org_id)},
-        select:{
-            role:true
-        },
     })
     return res.json({message:"Roles fetched succesfully",data:membership})
 })
@@ -41,12 +38,7 @@ router.post('/:org_id/create',auth,role,async(req,res,next)=>{
         const created_role = await client.role.create({
             data:{
                 ...role,
-            }
-        })
-        const assign = await client.organizationRoles.create({
-            data:{
-                organization_id:Number(org_id),
-                role_id:created_role.id
+                organization_id:Number(req.params.org_id),
             }
         })
         return res.json({message:"role created successfully"})
@@ -90,17 +82,10 @@ router.post('/:org_id/delete',auth,role,async(req,res,next)=>{
             res.statusCode = 400
             throw new Error("Please provide a role id")
         }
-        await client.role.delete({
+        const status = await client.role.delete({
             where:{
-                id:Number(role_id)
-            }
-        })
-        const delete_role = await client.organizationRoles.delete({
-            where:{
-                organization_id_role_id:{
-                    organization_id:Number(org_id),
-                    role_id:Number(role_id)
-                }
+                id:Number(role_id),
+                organization_id:Number(req.params.org_id)
             }
         })
     }catch(err){

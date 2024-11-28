@@ -1,7 +1,10 @@
 const router = require('express').Router()
 const auth = require('../middleware/auth.middleware')
 const role = require('../middleware/role.middleware')
+const jwt = require('jsonwebtoken')
 const {client} = require('../utils/dbConnect')
+const {owner_role} = require('../utils/sampleRoles')
+
 
 router.post('/create',auth,async(req,res,next)=>{
     try{
@@ -13,10 +16,10 @@ router.post('/create',auth,async(req,res,next)=>{
             }
         })
         console.log("org:",org)
-        const role = await client.organizationRoles.create({
+        const role = await client.role.create({
             data:{
                 organization_id:Number(org.id),
-                role_id:1
+                ...owner_role
             }
         })
         console.log("role:",role,req.user.id)   
@@ -121,7 +124,7 @@ router.post('/edit/:org_id',auth,role,async(req,res,next)=>{
 router.post('/addusers',auth,role,async(req,res,next)=>{
     try{
         const {organization_id} = req.body
-        if(!req.role.org_edit){
+        if(!req.role.org_update){
             res.statusCode = 403
             throw new Error("user doesn't have permission to edit")
         }
@@ -149,7 +152,7 @@ router.post('/addusers',auth,role,async(req,res,next)=>{
 router.post('/removeusers',auth,role,async(req,res,next)=>{
     try{
         const {organization_id} = req.body
-        if(!req.role.org_edit){
+        if(!req.role.org_update){
             res.statusCode = 403
             throw new Error("user doesn't have permission to edit")
         }
@@ -195,7 +198,7 @@ router.get('/delete/:org_id',auth,role,async(req,res,next)=>{
 
 router.post('/invite/generate/:org_id',auth,role,async(req,res,next)=>{
     try{
-        if(!req.role.org_edit){
+        if(!req.role.org_update){
             res.statusCode = 403
             throw new Error("User doesn't have permission to invite users")
         }

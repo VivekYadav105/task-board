@@ -24,8 +24,12 @@ const roleMiddleware =async(req,res,next)=>{
                     user_id: Number(req.user.id),
                     organization_id: org.id,
                 }               
+            },
+            include:{
+                
             }
         })    
+        console.log(data)
         if(!data){
             res.statusCode = 403
             throw new Error('User is not a part of this organization');
