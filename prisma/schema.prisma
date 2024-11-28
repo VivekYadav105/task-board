@@ -1,0 +1,113 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["relationJoins"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Role {
+  id                  Int                 @id @default(autoincrement())
+  name                String
+  description         String              @default("")
+  // role based permissions
+  role_create         Boolean             @default(false)
+  role_edit           Boolean             @default(false)
+  role_delete         Boolean             @default(false)
+  // task related permissions
+  task_create         Boolean             @default(false)
+  task_view           Boolean             @default(true)
+  task_status_update  Boolean             @default(false)
+  task_edit           Boolean             @default(false)
+  task_assign         Boolean             @default(false)
+  task_delete         Boolean             @default(false)
+  // user related permissions in organization
+  user_assign         Boolean             @default(false)
+  user_add            Boolean             @default(false)
+  user_remove         Boolean             @default(false)
+  // organization crud permissions
+  org_create          Boolean             @default(false)
+  org_update          Boolean             @default(false)
+  org_delete          Boolean             @default(false)
+  org_view            Boolean             @default(false)
+  // promotion based prilivige
+  // 0 - basic 1 - ismanager 2 - isAdmin  
+  promotion_privilege Int                 @default(0)
+  organization        OrganizationRoles[]
+}
+
+model User {
+  id              Int          @id @default(autoincrement())
+  fname           String
+  lname           String
+  email           String       @unique
+  password        String
+  isVerified      Boolean      @default(false)
+  organizations   Membership[]
+  tasksAssignedTo TaskAssign[] @relation("assignedToRelation")
+  tasksAssignedBy TaskAssign[] @relation("assignedByRelation")
+  org_created     Int          @default(0)
+}
+
+model OrganizationRoles {
+  organization_id Int
+  role_id         Int
+  role            Role         @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  organization    Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  membership      Membership[]
+
+  @@id([organization_id, role_id])
+}
+
+model Membership {
+  user_id         Int
+  role_id         Int
+  organization_id Int
+  user            User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  org_role        OrganizationRoles @relation(fields: [organization_id, role_id], references: [organization_id, role_id], onDelete: Cascade)
+  @@id([user_id, organization_id])
+}
+
+model Task {
+  id             Int          @id @default(autoincrement())
+  title          String
+  status         String
+  organizationId Int
+  priority       Int
+  deadline       DateTime
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+  usersStatus    TaskAssign[] // single task has mutiple users working on it
+}
+
+model TaskAssign {
+  task_id          Int
+  assigned_to      Int
+  assigned_by      Int
+  task             Task @relation(fields: [task_id], references: [id])
+  assignedByUser   User @relation(name: "assignedByRelation", fields: [assigned_by], references: [id])
+  assigned_to_user User @relation(name: "assignedToRelation", fields: [assigned_to], references: [id])
+
+  @@id([task_id, assigned_to])
+}
+
+model Organization {
+  id          Int                 @id @default(autoincrement())
+  name        String
+  description String              @default("")
+  tasks       Task[]
+  roles       OrganizationRoles[]
+  owner       Int
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  BLOCKED
+}
